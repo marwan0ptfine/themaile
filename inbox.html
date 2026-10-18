@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webmail :: Inbox</title>
+    <link rel="shortcut icon" href="data:image/svg+xml,%3Csvg version='1.1' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Cpath fill='%232c3e50' d='M40,0c22.091,0,40,17.909,40,40S62.091,80,40,80S0,62.091,0,40S17.909,0,40,0z'/%3E%3Cpath fill='%238cc9f0' d='M50.378,32.576c0,1.005-0.815,1.821-1.821,1.821c-1.005,0-1.82-0.816-1.82-1.821 c0-1.005,0.815-1.821,1.82-1.821C49.563,30.755,50.378,31.571,50.378,32.576z M54.627,27.113c0-0.341-0.304-0.607-0.646-0.607 c-6.601,0-10.223,1.518-14.964,6.241c-1.081,1.1-2.2,2.352-3.338,3.699l-7.188,0.379c-0.19,0.019-0.379,0.133-0.493,0.304 l-4.249,7.284c-0.133,0.228-0.095,0.53,0.095,0.739l1.214,1.215c0.114,0.113,0.285,0.17,0.437,0.17c0.057,0,0.114,0,0.17-0.02 l5.235-1.611l5.33,5.33l-1.612,5.236c-0.057,0.209,0,0.437,0.152,0.606l1.214,1.214c0.133,0.114,0.284,0.171,0.436,0.171 c0.114,0,0.208-0.021,0.304-0.075l7.283-4.25c0.171-0.113,0.284-0.304,0.305-0.492l0.379-7.19c1.347-1.138,2.599-2.257,3.699-3.339 C52.882,37.603,54.627,33.411,54.627,27.113z'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --nav-bg: #272c30;
+            --nav-hover: #343a40;
+            --nav-active: #1d2124;
+            --folder-bg: #f8f9fa;
+            --border: #dee2e6;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --link-color: #007bff;
+            --selected-row: #e8f0fe;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 13px;
+            color: var(--text-primary);
+            background-color: var(--white);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Column 1: Task Bar */
+        .taskbar {
+            width: 52px;
+            background-color: var(--nav-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+            flex-shrink: 0;
+        }
+
+        .taskbar .app-logo {
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        .taskbar button, .taskbar a {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #adb5bd;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            margin-bottom: 4px;
+            transition: background-color 0.1s, color 0.1s;
+        }
+
+        .taskbar button:hover, .taskbar a:hover {
+            background-color: var(--nav-hover);
+            color: #ffffff;
+        }
+
+        .taskbar button.active, .taskbar a.active {
+            background-color: var(--nav-active);
+            color: #ffffff;
+        }
+
+        .taskbar .spacer {
+            flex: 1;
+        }
+
+        /* Column 2: Folder Pane */
+        .folder-pane {
+            width: 190px;
+            background-color: var(--folder-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .folder-header {
+            padding: 10px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .folder-list {
+            list-style: none;
+            padding: 6px 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .folder-list li button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 7px 14px;
+            color: var(--text-primary);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            gap: 10px;
+            text-align: left;
+        }
+
+        .folder-list li button:hover {
+            background-color: #e9ecef;
+        }
+
+        .folder-list li.active button {
+            background-color: #e2e6ea;
+            font-weight: 600;
+        }
+
+        .badge-count {
+            margin-left: auto;
+            background: #adb5bd;
+            color: #fff;
+            padding: 0 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .folder-list li.active .badge-count {
+            background: #007bff;
+        }
+
+        .quota-box {
+            padding: 10px 14px;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .quota-bar {
+            height: 4px;
+            background: #dee2e6;
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .quota-bar-fill {
+            height: 100%;
+            width: 4%;
+            background: #28a745;
+        }
+
+        /* Column 3: Message List */
+        .message-list-pane {
+            width: 340px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            background: var(--white);
+        }
+
+        .toolbar {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 5px 9px;
+            font-size: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #80bdff;
+        }
+
+        .message-rows {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .message-row {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f3f5;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .message-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        .message-row.selected {
+            background-color: var(--selected-row);
+        }
+
+        .message-row.unread .sender-text {
+            font-weight: 700;
+        }
+
+        .message-row.unread .subject-text {
+            font-weight: 600;
+        }
+
+        .row-line1 {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .sender-text {
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .date-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .subject-text {
+            font-size: 12px;
+            color: #495057;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+
+        .snippet-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .empty-placeholder {
+            padding: 30px 15px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        /* Column 4: Message Preview */
+        .preview-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--white);
+            overflow: hidden;
+        }
+
+        .action-toolbar {
+            padding: 6px 14px;
+            border-bottom: 1px solid var(--border);
+            background: #f8f9fa;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .btn-ui {
+            background: #ffffff;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            padding: 4px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #495057;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-ui:hover {
+            background: #f1f3f5;
+        }
+
+        .btn-ui.primary {
+            background: #007bff;
+            border-color: #007bff;
+            color: #ffffff;
+        }
+
+        .btn-ui.primary:hover {
+            background: #0069d9;
+        }
+
+        .current-account {
+            margin-left: auto;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .current-account span {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .preview-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-subject {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .header-table {
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            padding: 2px 0;
+        }
+
+        .header-table td.label {
+            color: var(--text-secondary);
+            width: 60px;
+        }
+
+        .header-table td.val {
+            color: var(--text-primary);
+        }
+
+        .preview-content {
+            padding: 0;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #212529;
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-content hr {
+            border: 0;
+            border-top: 1px solid #e9ecef;
+            margin: 15px 0;
+        }
+
+        /* Compose / View Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-dialog {
+            background: #ffffff;
+            width: 550px;
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-head {
+            background: #272c30;
+            color: #ffffff;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .modal-head button {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .modal-body .form-group {
+            margin-bottom: 12px;
+        }
+
+        .modal-body label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .modal-body input, .modal-body textarea {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .modal-body textarea {
+            height: 130px;
+            resize: vertical;
+        }
+
+        .modal-foot {
+            background: #f8f9fa;
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #32383e;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 2000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Task Bar -->
+    <div class="taskbar">
+        <div class="app-logo" onclick="showToast('ZSTHOST Webmail Engine 1.6.12')">
+            <svg width="28" height="28" viewBox="0 0 80 80">
+                <path fill="#2c3e50" d="M40,0c22.091,0,40,17.909,40,40S62.091,80,40,80S0,62.091,0,40S17.909,0,40,0z"/>
+                <path fill="#8cc9f0" d="M50.378,32.576c0,1.005-0.815,1.821-1.821,1.821c-1.005,0-1.82-0.816-1.82-1.821 c0-1.005,0.815-1.821,1.82-1.821C49.563,30.755,50.378,31.571,50.378,32.576z M54.627,27.113c0-0.341-0.304-0.607-0.646-0.607 c-6.601,0-10.223,1.518-14.964,6.241c-1.081,1.1-2.2,2.352-3.338,3.699l-7.188,0.379c-0.19,0.019-0.379,0.133-0.493,0.304 l-4.249,7.284c-0.133,0.228-0.095,0.53,0.095,0.739l1.214,1.215c0.114,0.113,0.285,0.17,0.437,0.17c0.057,0,0.114,0,0.17-0.02 l5.235-1.611l5.33,5.33l-1.612,5.236c-0.057,0.209,0,0.437,0.152,0.606l1.214,1.214c0.133,0.114,0.284,0.171,0.436,0.171 c0.114,0,0.208-0.021,0.304-0.075l7.283-4.25c0.171-0.113,0.284-0.304,0.305-0.492l0.379-7.19c1.347-1.138,2.599-2.257,3.699-3.339 C52.882,37.603,54.627,33.411,54.627,27.113z"/>
+            </svg>
+        </div>
+        <button class="active" id="btn-nav-mail" onclick="switchSection('mail')" title="Mail">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </button>
+        <button id="btn-nav-contacts" onclick="switchSection('contacts')" title="Contacts">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        </button>
+        <button id="btn-nav-settings" onclick="switchSection('settings')" title="Settings">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </button>
+        <div class="spacer"></div>
+        <a href="index.html" title="Logout" onclick="showToast('Logging out...')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </a>
+    </div>
+
+    <!-- 2. Folder Pane -->
+    <div class="folder-pane">
+        <div class="folder-header">
+            <span>Folders</span>
+            <button onclick="refreshFolder()" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);" title="Check for new mail">
+                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+        </div>
+        <ul class="folder-list">
+            <li class="active" id="folder-inbox">
+                <button onclick="selectFolder('inbox', this)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                    <span>Inbox</span>
+                </button>
+            </li>
+            <li id="folder-drafts">
+                <button onclick="selectFolder('drafts', this)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    <span>Drafts</span>
+                </button>
+            </li>
+            <li id="folder-sent">
+                <button onclick="selectFolder('sent', this)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                    <span>Sent</span>
+                </button>
+            </li>
+            <li id="folder-junk">
+                <button onclick="selectFolder('junk', this)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <span>Junk</span>
+                </button>
+            </li>
+            <li id="folder-trash">
+                <button onclick="selectFolder('trash', this)">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    <span>Trash</span>
+                </button>
+            </li>
+        </ul>
+        <div class="quota-box">
+            <div>Quota: 20% of 1000 MB</div>
+            <div class="quota-bar"><div class="quota-bar-fill"></div></div>
+        </div>
+    </div>
+
+    <!-- 3. Message List Pane -->
+    <div class="message-list-pane">
+        <div class="toolbar">
+            <input type="text" id="search-box" class="search-input" placeholder="Search..." oninput="handleSearch(this.value)">
+        </div>
+        <ul class="message-rows" id="message-list">
+            <!-- Messages rendered dynamically -->
+        </ul>
+    </div>
+
+    <!-- 4. Preview Pane -->
+    <div class="preview-pane">
+        <div class="action-toolbar">
+            <button class="btn-ui primary" onclick="openComposeModal()">Compose</button>
+            <button class="btn-ui" onclick="replyCurrentMail()">Reply</button>
+            <button class="btn-ui" onclick="forwardCurrentMail()">Forward</button>
+            <button class="btn-ui" onclick="deleteCurrentMail()">Delete</button>
+            <button class="btn-ui" onclick="markUnreadCurrentMail()">Mark unread</button>
+            <div class="current-account">Account: <span>pelanisede@bandannamail.co.in</span></div>
+        </div>
+
+        <div class="preview-header">
+            <div class="preview-subject" id="subject-el">Mailbox Setup Completed</div>
+            <table class="header-table">
+                <tr>
+                    <td class="label">From:</td>
+                    <td class="val" id="from-el">Postmaster &lt;postmaster@mail.zsthost.com&gt;</td>
+                </tr>
+                <tr>
+                    <td class="label">To:</td>
+                    <td class="val">pelanisede@bandannamail.co.in</td>
+                </tr>
+                <tr>
+                    <td class="label">Date:</td>
+                    <td class="val" id="date-el">Today 09:12</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="preview-content" id="body-el" style="width: 100%; height: 100%; flex: 1; display: flex; padding: 0; overflow: hidden;">
+            <iframe id="mail-iframe" style="width: 100%; height: 100%; flex: 1; border: none; background: #ffffff;"></iframe>
+        </div>
+    </div>
+
+    <!-- Compose Modal -->
+    <div class="modal-overlay" id="compose-modal">
+        <div class="modal-dialog">
+            <div class="modal-head">
+                <span id="compose-title">New Message</span>
+                <button onclick="closeComposeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>To:</label>
+                    <input type="text" id="compose-to" placeholder="recipient@domain.com">
+                </div>
+                <div class="form-group">
+                    <label>Subject:</label>
+                    <input type="text" id="compose-subject" placeholder="Message subject">
+                </div>
+                <div class="form-group">
+                    <label>Message:</label>
+                    <textarea id="compose-body" placeholder="Write your message here..."></textarea>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn-ui" onclick="closeComposeModal()">Cancel</button>
+                <button class="btn-ui primary" onclick="sendMail()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast-el">Action completed</div>
+
+    <script src="emails_data.js"></script>
+    <script>
+        let currentFolder = 'inbox';
+        let currentActiveId = 1;
+
+        const mailDatabase = {
+            inbox: [
+                {
+                    id: 19,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Oct 29, 2025",
+                    subject: "You Changed Your Email",
+                    snippet: "We successfully changed the email on your Riot Account. Old: pel*************@ban****.co.in...",
+                    contentKey: "change_email",
+                    unread: false
+                },
+                {
+                    id: 18,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Oct 29, 2025",
+                    subject: "Riot Games password change request",
+                    snippet: "To change your password, click the link below: https://eu.recovery.riotgames.com/...",
+                    contentKey: "pw1",
+                    unread: false
+                },
+                {
+                    id: 17,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Oct 28, 2025",
+                    subject: "Login Code: 842190",
+                    snippet: "Here's your sign-in code: 842190. This code will expire soon...",
+                    contentKey: "c1",
+                    unread: false
+                },
+                {
+                    id: 16,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Oct 28, 2025",
+                    subject: "Purchase Confirmation Receipt",
+                    snippet: "Thanks for your order dazzerplayzz. You have bought: 11000 VALORANT Points. Paid: £89.99...",
+                    contentKey: "p4",
+                    unread: false
+                },
+                {
+                    id: 15,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Oct 15, 2025",
+                    subject: "Login Code: 195420",
+                    snippet: "Here's your sign-in code: 195420. This code will expire soon...",
+                    contentKey: "c2",
+                    unread: false
+                },
+                {
+                    id: 14,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Sep 06, 2025",
+                    subject: "Login Code: 069313",
+                    snippet: "Here's your sign-in code: 069313. This code will expire soon...",
+                    contentKey: "c3",
+                    unread: false
+                },
+                {
+                    id: 13,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Aug 24, 2025",
+                    subject: "Login Code: 773012",
+                    snippet: "Here's your sign-in code: 773012. This code will expire soon...",
+                    contentKey: "c4",
+                    unread: false
+                },
+                {
+                    id: 12,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Aug 11, 2025",
+                    subject: "Purchase Confirmation Receipt",
+                    snippet: "Thanks for your order dazzerplayzz. You have bought: 11000 VALORANT Points. Paid: £89.99...",
+                    contentKey: "p3",
+                    unread: false
+                },
+                {
+                    id: 11,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Jul 19, 2025",
+                    subject: "Login Code: 429188",
+                    snippet: "Here's your sign-in code: 429188. This code will expire soon...",
+                    contentKey: "c5",
+                    unread: false
+                },
+                {
+                    id: 10,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Jul 10, 2025",
+                    subject: "Riot Games password change request",
+                    snippet: "To change your password, click the link below: https://eu.recovery.riotgames.com/...",
+                    contentKey: "pw2",
+                    unread: false
+                },
+                {
+                    id: 9,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Jun 02, 2025",
+                    subject: "Login Code: 602491",
+                    snippet: "Here's your sign-in code: 602491. This code will expire soon...",
+                    contentKey: "c6",
+                    unread: false
+                },
+                {
+                    id: 8,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "May 20, 2025",
+                    subject: "Purchase Confirmation Receipt",
+                    snippet: "Thanks for your order dazzerplayzz. You have bought: 11000 VALORANT Points. Paid: £89.99...",
+                    contentKey: "p2",
+                    unread: false
+                },
+                {
+                    id: 7,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Apr 11, 2025",
+                    subject: "Login Code: 318765",
+                    snippet: "Here's your sign-in code: 318765. This code will expire soon...",
+                    contentKey: "c7",
+                    unread: false
+                },
+                {
+                    id: 6,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Mar 08, 2025",
+                    subject: "Login Code: 951204",
+                    snippet: "Here's your sign-in code: 951204. This code will expire soon...",
+                    contentKey: "c8",
+                    unread: false
+                },
+                {
+                    id: 5,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Feb 14, 2025",
+                    subject: "Purchase Confirmation Receipt",
+                    snippet: "Thanks for your order dazzerplayzz. You have bought: 11000 VALORANT Points. Paid: £89.99...",
+                    contentKey: "p1",
+                    unread: false
+                },
+                {
+                    id: 4,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Jan 28, 2025",
+                    subject: "Riot Games password change request",
+                    snippet: "To change your password, click the link below: https://eu.recovery.riotgames.com/...",
+                    contentKey: "pw3",
+                    unread: false
+                },
+                {
+                    id: 3,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@mail.accounts.riotgames.com&gt;",
+                    date: "Jan 22, 2025",
+                    subject: "Login Code: 580137",
+                    snippet: "Here's your sign-in code: 580137. This code will expire soon...",
+                    contentKey: "c9",
+                    unread: false
+                },
+                {
+                    id: 2,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@umail.accounts.riotgames.com&gt;",
+                    date: "Dec 16, 2024",
+                    subject: "Verify Your Email",
+                    snippet: "Keep your Riot Account secure by verifying your email address. Verify Email...",
+                    contentKey: "verify",
+                    unread: false
+                },
+                {
+                    id: 1,
+                    sender: "Riot Games",
+                    from: "Riot Games &lt;noreply@umail.accounts.riotgames.com&gt;",
+                    date: "Dec 16, 2024",
+                    subject: "Welcome to Riot Games",
+                    snippet: "Congratulations! You’ve created a Riot Account. Username: dazzerplayzz...",
+                    contentKey: "welcome",
+                    unread: false
+                }
+            ],
+            drafts: [],
+            sent: [],
+            junk: [],
+            trash: []
+        };
+
+
+        function showToast(text) {
+            const toast = document.getElementById('toast-el');
+            toast.innerText = text;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2500);
+        }
+
+        function renderMailList(filterText = "") {
+            const listEl = document.getElementById('message-list');
+            listEl.innerHTML = "";
+
+            const items = mailDatabase[currentFolder].filter(m => 
+                m.subject.toLowerCase().includes(filterText.toLowerCase()) || 
+                m.sender.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            if (items.length === 0) {
+                listEl.innerHTML = `<div class="empty-placeholder">No messages in this folder</div>`;
+                document.getElementById('subject-el').innerText = "(No message selected)";
+                document.getElementById('from-el').innerText = "-";
+                document.getElementById('date-el').innerText = "-";
+                document.getElementById('body-el').innerHTML = "<p style='color:#6c757d;'>Select a message to read.</p>";
+                return;
+            }
+
+            items.forEach(m => {
+                const li = document.createElement('li');
+                li.className = `message-row ${m.id === currentActiveId ? 'selected' : ''} ${m.unread ? 'unread' : ''}`;
+                li.onclick = () => selectMail(m.id);
+                li.innerHTML = `
+                    <div class="row-line1">
+                        <span class="sender-text">${m.sender}</span>
+                        <span class="date-text">${m.date}</span>
+                    </div>
+                    <div class="subject-text">${m.subject}</div>
+                    <div class="snippet-text">${m.snippet}</div>
+                `;
+                listEl.appendChild(li);
+            });
+
+            // If active item exists in current folder, preview it
+            const activeMail = mailDatabase[currentFolder].find(m => m.id === currentActiveId) || items[0];
+            if (activeMail) {
+                currentActiveId = activeMail.id;
+                showPreview(activeMail);
+            }
+        }
+
+        function showPreview(mail) {
+            document.getElementById('subject-el').innerText = mail.subject;
+            document.getElementById('from-el').innerHTML = mail.from;
+            document.getElementById('date-el').innerText = mail.date;
+            
+            const iframe = document.getElementById('mail-iframe');
+            if (iframe) {
+                if (mail.contentKey && typeof emailHtmlData !== 'undefined' && emailHtmlData[mail.contentKey]) {
+                    iframe.srcdoc = emailHtmlData[mail.contentKey];
+                } else if (mail.body) {
+                    iframe.srcdoc = mail.body;
+                }
+            }
+        }
+
+        function selectMail(id) {
+            currentActiveId = id;
+            const mail = mailDatabase[currentFolder].find(m => m.id === id);
+            if (mail) {
+                mail.unread = false;
+                showPreview(mail);
+                renderMailList();
+            }
+        }
+
+        function selectFolder(folderName, el) {
+            currentFolder = folderName;
+            document.querySelectorAll('.folder-list li').forEach(li => li.classList.remove('active'));
+            el.closest('li').classList.add('active');
+            renderMailList();
+            showToast(`Switched to ${folderName.toUpperCase()}`);
+        }
+
+        function refreshFolder() {
+            showToast("Checking for new messages...");
+            setTimeout(() => {
+                renderMailList();
+                showToast("Folder is up to date");
+            }, 600);
+        }
+
+        function handleSearch(val) {
+            renderMailList(val);
+        }
+
+        function deleteCurrentMail() {
+            const list = mailDatabase[currentFolder];
+            const idx = list.findIndex(m => m.id === currentActiveId);
+            if (idx > -1) {
+                const [deleted] = list.splice(idx, 1);
+                if (currentFolder !== 'trash') {
+                    mailDatabase.trash.push(deleted);
+                }
+                showToast("Message deleted");
+                renderMailList();
+            }
+        }
+
+        function markUnreadCurrentMail() {
+            const mail = mailDatabase[currentFolder].find(m => m.id === currentActiveId);
+            if (mail) {
+                mail.unread = true;
+                renderMailList();
+                showToast("Marked as unread");
+            }
+        }
+
+        function openComposeModal(to = "", subject = "", body = "") {
+            document.getElementById('compose-to').value = to;
+            document.getElementById('compose-subject').value = subject;
+            document.getElementById('compose-body').value = body;
+            document.getElementById('compose-modal').style.display = 'flex';
+        }
+
+        function closeComposeModal() {
+            document.getElementById('compose-modal').style.display = 'none';
+        }
+
+        function replyCurrentMail() {
+            const mail = mailDatabase[currentFolder].find(m => m.id === currentActiveId);
+            if (mail) {
+                openComposeModal(mail.from, "Re: " + mail.subject, `\n\n--- Original Message ---\nFrom: ${mail.from}\nDate: ${mail.date}\n`);
+            }
+        }
+
+        function forwardCurrentMail() {
+            const mail = mailDatabase[currentFolder].find(m => m.id === currentActiveId);
+            if (mail) {
+                openComposeModal("", "Fwd: " + mail.subject, `\n\n--- Forwarded Message ---\nFrom: ${mail.from}\nDate: ${mail.date}\nSubject: ${mail.subject}\n`);
+            }
+        }
+
+        function sendMail() {
+            const to = document.getElementById('compose-to').value;
+            const sub = document.getElementById('compose-subject').value || "(No Subject)";
+            const body = document.getElementById('compose-body').value;
+
+            if (!to) {
+                alert("Please specify a recipient email address.");
+                return;
+            }
+
+            mailDatabase.sent.push({
+                id: Date.now(),
+                sender: "Me",
+                from: "pelanisede@bandannamail.co.in",
+                date: "Just now",
+                subject: sub,
+                snippet: body.substring(0, 45) + "...",
+                body: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+                unread: false
+            });
+
+            closeComposeModal();
+            showToast("Message sent successfully");
+        }
+
+        function switchSection(sec) {
+            document.querySelectorAll('.taskbar button').forEach(b => b.classList.remove('active'));
+            if (sec === 'mail') {
+                document.getElementById('btn-nav-mail').classList.add('active');
+                showToast("Switched to Mail view");
+            } else if (sec === 'contacts') {
+                document.getElementById('btn-nav-contacts').classList.add('active');
+                showToast("Address Book / Contacts is empty");
+            } else if (sec === 'settings') {
+                document.getElementById('btn-nav-settings').classList.add('active');
+                showToast("Settings: Preferences loaded");
+            }
+        }
+
+        // Initial setup
+        renderMailList();
+    </script>
+</body>
+</html>
